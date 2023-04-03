@@ -48,8 +48,10 @@ func (gm *Gamemaster) handleTurn() {
 	gm.playerTurn(&gm.players[1])
 	gm.board.printBoard(&gm.players[0], &gm.players[1], gm.board.height)
 	if gm.players[0].stonesLeft > 0 {
+		gm.turn = gm.turn + 1
 		gm.handleTurn()
 	}
+
 }
 
 func (gm *Gamemaster) playerTurn(player *Player) {
@@ -58,11 +60,25 @@ func (gm *Gamemaster) playerTurn(player *Player) {
 	xcoordinate, xerr := strconv.Atoi(coordinate[0])
 	ycoordinate, yerr := strconv.Atoi(coordinate[1])
 	if xerr == nil && yerr == nil {
-		player.setStone(xcoordinate, ycoordinate)
+
+		if gm.fieldAvailable(xcoordinate, ycoordinate) {
+			player.setStone(xcoordinate, ycoordinate)
+		} else {
+			fmt.Println("This field is already occupied, choose another one")
+			gm.playerTurn(player)
+		}
 	} else {
 		fmt.Println("There was an error!")
 	}
 
+}
+func (gm *Gamemaster) fieldAvailable(xAxis int, yAxis int) bool {
+	for i := range gm.players {
+		if gm.players[i].getFieldValue(xAxis, yAxis) {
+			return false
+		}
+	}
+	return true
 }
 
 type Board struct {
@@ -79,7 +95,6 @@ func (board *Board) printBoard(player1 *Player, player2 *Player, turns int) {
 	for i := int(1); i <= board.height; i++ {
 		line = fmt.Sprint(i) + "|"
 		for e := int(1); e <= board.width; e++ {
-
 			if player1.getFieldValue(e, i) {
 				line = line + player1.symbol + "|"
 			} else if player2.getFieldValue(e, i) {
