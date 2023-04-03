@@ -1,20 +1,85 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
-type Board struct {
-	height int32
-	width  int32
+type Gamemaster struct {
+	turn    int
+	players []Player
+	board   Board
 }
 
-func (board *Board) printBoard(player1 *Player, player2 *Player) {
+func (gm *Gamemaster) welcome() {
+	fmt.Println("Welcome to this tiny command line tictacgo. I'm you're gamemaster!")
+}
+func (gm *Gamemaster) readInput() string {
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+	return strings.TrimSuffix(text, "\n")
 
-	for i := int32(1); i <= board.height; i++ {
-		line := "|"
-		for e := int32(1); e <= board.width; e++ {
+}
+func (gm *Gamemaster) setupUsers() {
+	fmt.Println("Player 1, what's your username?")
+	gm.players = append(gm.players, Player{name: gm.readInput(), symbol: "x", stonesLeft: 4})
+	fmt.Println("Ok, your symbol for the game is ===> 'x'")
+	fmt.Println("Whats the 2nd player's name?")
+	gm.players = append(gm.players, Player{name: gm.readInput(), symbol: "z", stonesLeft: 4})
+	fmt.Println("Ok, your symbol for the game is ===> 'z'")
+
+}
+func (gm *Gamemaster) startGame() {
+	gm.board = Board{height: 3, width: 3}
+	fmt.Println("Ok, let's start the game!")
+	fmt.Println("-------------------------")
+	gm.board.printBoard(&gm.players[0], &gm.players[1], gm.board.height)
+	gm.turn = 1
+}
+func (gm *Gamemaster) handleTurn() {
+	fmt.Println()
+	fmt.Println("------ TURN " + fmt.Sprint(gm.turn) + " --------")
+	gm.playerTurn(&gm.players[0])
+	gm.board.printBoard(&gm.players[0], &gm.players[1], gm.board.height)
+	gm.playerTurn(&gm.players[1])
+	gm.board.printBoard(&gm.players[0], &gm.players[1], gm.board.height)
+	if gm.players[0].stonesLeft > 0 {
+		gm.handleTurn()
+	}
+}
+
+func (gm *Gamemaster) playerTurn(player *Player) {
+	fmt.Println(player.name + ", it's your turn. Enter the field to place a stone like 'x-coordinate y-coordinate'")
+	coordinate := strings.Split(gm.readInput(), " ")
+	xcoordinate, xerr := strconv.Atoi(coordinate[0])
+	ycoordinate, yerr := strconv.Atoi(coordinate[1])
+	if xerr == nil && yerr == nil {
+		player.setStone(xcoordinate, ycoordinate)
+	} else {
+		fmt.Println("There was an error!")
+	}
+
+}
+
+type Board struct {
+	height int
+	width  int
+}
+
+func (board *Board) printBoard(player1 *Player, player2 *Player, turns int) {
+	line := "0"
+	for j := 1; j <= turns; j++ {
+		line = line + " " + fmt.Sprint(j)
+	}
+	fmt.Println(line)
+	for i := int(1); i <= board.height; i++ {
+		line = fmt.Sprint(i) + "|"
+		for e := int(1); e <= board.width; e++ {
+
 			if player1.getFieldValue(e, i) {
 				line = line + player1.symbol + "|"
 			} else if player2.getFieldValue(e, i) {
@@ -25,51 +90,47 @@ func (board *Board) printBoard(player1 *Player, player2 *Player) {
 		}
 		fmt.Println(line)
 	}
-
 }
 
-type Stones [][]int32 // [x-axis,y-axis]
+type Stones [][]int // [x-axis,y-axis]
 type Player struct {
 	name       string
 	stones     Stones
-	color      string //
-	stonesLeft int32
+	stonesLeft int
 	symbol     string
 }
 
-func (player *Player) getFieldValue(xAxis int32, yAxis int32) bool {
+func (player *Player) getFieldValue(xAxis int, yAxis int) bool {
 	for i := range player.stones {
-		if reflect.DeepEqual(player.stones[i], []int32{xAxis, yAxis}) {
+		if reflect.DeepEqual(player.stones[i], []int{xAxis, yAxis}) {
 			return true
 		}
 	}
 	return false
 }
-func (player *Player) setColor(color string) {
-	player.color = color
-}
 
-func (player *Player) setStone(xAxis int32, yAxis int32) {
-	//coordinates := []int32{xAxis, yAxis}
-	player.stones = append(player.stones, []int32{xAxis, yAxis})
+func (player *Player) setStone(xAxis int, yAxis int) {
+	//coordinates := []int{xAxis, yAxis}
+	player.stones = append(player.stones, []int{xAxis, yAxis})
+	player.stonesLeft = player.stonesLeft - 1
 }
 
 func main() {
-	player1 := Player{name: "Joe", stonesLeft: 3, symbol: "x"}
-	player2 := Player{name: "Jane", stonesLeft: 3, symbol: "z"}
-	player1.setColor("blue")
-	player2.setColor("red")
-	board := Board{height: 3, width: 3}
-	player1.setStone(2, 2)
-	player2.setStone(1, 3)
-	player1.setStone(2, 1)
-	player2.setStone(2, 3)
-	player1.setStone(3, 3)
-	player2.setStone(1, 1)
-	player1.setStone(1, 2)
-	player2.setStone(3, 2)
 
-	fmt.Println(player1)
-	fmt.Println(player2)
-	board.printBoard(&player1, &player2)
+	/**app := &cli.App{
+		Name:  "TicTacGo",
+		Usage: "Play a little",
+		Action: func(*cli.Context) error {
+			fmt.Println("boom! I say!")
+			return nil
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}**/
+	gm := Gamemaster{}
+	gm.welcome()
+	gm.setupUsers()
+	gm.startGame()
+	gm.handleTurn()
 }
