@@ -10,9 +10,10 @@ import (
 )
 
 type Gamemaster struct {
-	turn    int
-	players []Player
-	board   Board
+	turn     int
+	players  []Player
+	board    Board
+	winpairs []winPair
 }
 
 func (gm *Gamemaster) welcome() {
@@ -29,12 +30,38 @@ func (gm *Gamemaster) setupUsers() {
 	gm.players = append(gm.players, Player{name: gm.readInput(), symbol: "x", stonesLeft: 4})
 	fmt.Println("Ok, your symbol for the game is ===> 'x'")
 	fmt.Println("Whats the 2nd player's name?")
-	gm.players = append(gm.players, Player{name: gm.readInput(), symbol: "z", stonesLeft: 4})
-	fmt.Println("Ok, your symbol for the game is ===> 'z'")
+	gm.players = append(gm.players, Player{name: gm.readInput(), symbol: "o", stonesLeft: 4})
+	fmt.Println("Ok, your symbol for the game is ===> 'o'")
+}
+
+// need to create the pairs for counting the winning columns/rows/diagonals
+func (gm *Gamemaster) setupGame() {
+	gm.board = Board{height: 3, width: 3}
+	aDiagPair := winPair{a: 0, b: 0} // this is whenever x-y == 0
+	bDiagPair := winPair{a: 0, b: 0} // this is whenever x-y == height-(height-1) (maxium distance between x and y )
+	//Create winpairs for columns/rows/
+	for i := 1; i <= gm.board.height; i++ {
+		xWinPair := winPair{a: 0, b: 0}
+		yWinPair := winPair{a: 0, b: 0}
+		for e := 1; e <= gm.board.width; e++ {
+			xWinPair.fields = append(xWinPair.fields, []int{e, i})
+			yWinPair.fields = append(yWinPair.fields, []int{i, e})
+			if e == i {
+				aDiagPair.fields = append(aDiagPair.fields, []int{e, i})
+				bDiagPair.fields = append(bDiagPair.fields, []int{i, e})
+			} else if e-i == (gm.board.height - (gm.board.height - 1)) {
+				aDiagPair.fields = append(aDiagPair.fields, []int{e, i})
+				bDiagPair.fields = append(bDiagPair.fields, []int{i, e})
+
+			}
+		}
+		gm.winpairs = append(gm.winpairs, xWinPair, yWinPair, bDiagPair, aDiagPair)
+	}
+
+	fmt.Println(gm.winpairs)
 
 }
 func (gm *Gamemaster) startGame() {
-	gm.board = Board{height: 3, width: 3}
 	fmt.Println("Ok, let's start the game!")
 	fmt.Println("-------------------------")
 	gm.board.printBoard(&gm.players[0], &gm.players[1], gm.board.height)
@@ -70,7 +97,6 @@ func (gm *Gamemaster) playerTurn(player *Player) {
 	} else {
 		fmt.Println("There was an error!")
 	}
-
 }
 func (gm *Gamemaster) fieldAvailable(xAxis int, yAxis int) bool {
 	for i := range gm.players {
@@ -78,6 +104,21 @@ func (gm *Gamemaster) fieldAvailable(xAxis int, yAxis int) bool {
 			return false
 		}
 	}
+	return true
+}
+
+type winPair struct {
+	fields Stones
+	a      int
+	b      int
+}
+
+// Once a stone is placed, you need to check if the player won
+// For this, we introduce one pair for each winnable column/row
+// The sum of the pairs determine the win for the column
+
+func (gm *Gamemaster) checkWin(xAxis int, yAxis int) bool {
+
 	return true
 }
 
@@ -146,6 +187,7 @@ func main() {
 	gm := Gamemaster{}
 	gm.welcome()
 	gm.setupUsers()
+	gm.setupGame()
 	gm.startGame()
 	gm.handleTurn()
 }
