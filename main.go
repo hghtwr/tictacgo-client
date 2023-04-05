@@ -10,10 +10,12 @@ import (
 )
 
 type Gamemaster struct {
-	turn     int
-	players  []Player
-	board    Board
-	winpairs []winPair
+	turn      int
+	players   []Player
+	board     Board
+	xWinpairs []winPair
+	yWinpairs []winPair
+	dWinpairs []winPair
 }
 
 func (gm *Gamemaster) welcome() {
@@ -46,21 +48,19 @@ func (gm *Gamemaster) setupGame() {
 		for e := 1; e <= gm.board.width; e++ {
 			xWinPair.fields = append(xWinPair.fields, []int{e, i})
 			yWinPair.fields = append(yWinPair.fields, []int{i, e})
-			if e == i {
-				aDiagPair.fields = append(aDiagPair.fields, []int{e, i})
-				bDiagPair.fields = append(bDiagPair.fields, []int{i, e})
-			} else if e-i == (gm.board.height - (gm.board.height - 1)) {
-				aDiagPair.fields = append(aDiagPair.fields, []int{e, i})
-				bDiagPair.fields = append(bDiagPair.fields, []int{i, e})
-
-			}
 		}
-		gm.winpairs = append(gm.winpairs, xWinPair, yWinPair, bDiagPair, aDiagPair)
+		gm.xWinpairs = append(gm.xWinpairs, xWinPair)
+		gm.yWinpairs = append(gm.yWinpairs, yWinPair)
 	}
+	for i := 1; i <= gm.board.height; i++ {
+		aDiagPair.fields = append(aDiagPair.fields, []int{i, i})                         //first diagonale like [1 1] [2 2]...
+		bDiagPair.fields = append(bDiagPair.fields, []int{i, (gm.board.height + 1) - i}) // second diag like [1 3] [2 2]...
 
-	fmt.Println(gm.winpairs)
+	}
+	gm.dWinpairs = append(gm.dWinpairs, bDiagPair, aDiagPair)
 
 }
+
 func (gm *Gamemaster) startGame() {
 	fmt.Println("Ok, let's start the game!")
 	fmt.Println("-------------------------")
@@ -90,6 +90,7 @@ func (gm *Gamemaster) playerTurn(player *Player) {
 
 		if gm.fieldAvailable(xcoordinate, ycoordinate) {
 			player.setStone(xcoordinate, ycoordinate)
+			gm.traceWin(xcoordinate, ycoordinate, *player)
 		} else {
 			fmt.Println("This field is already occupied, choose another one")
 			gm.playerTurn(player)
@@ -111,6 +112,24 @@ type winPair struct {
 	fields Stones
 	a      int
 	b      int
+}
+
+func (gm *Gamemaster) traceWin(xAxis int, yAxis int, player Player) {
+	xAxis = xAxis - 1
+	yAxis = yAxis - 1
+	if player.symbol == "x" {
+		gm.xWinpairs[xAxis].a = gm.xWinpairs[xAxis].a + 1
+		gm.yWinpairs[yAxis].a = gm.yWinpairs[yAxis].a + 1
+		if gm.xWinpairs[xAxis].a == 3 || gm.yWinpairs[yAxis].a == 3 {
+			fmt.Println(player.name + " wins!!")
+		}
+	} else {
+		gm.xWinpairs[xAxis].b = gm.xWinpairs[xAxis].b - 1
+		gm.yWinpairs[yAxis].b = gm.yWinpairs[yAxis].b - 1
+		if gm.xWinpairs[xAxis].b == -3 || gm.yWinpairs[yAxis].b == -3 {
+			fmt.Println(player.name + " wins!!")
+		}
+	}
 }
 
 // Once a stone is placed, you need to check if the player won
